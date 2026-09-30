@@ -1,0 +1,8 @@
+place,lat,lon,source_type,severity,confirmed
+Sangrur (Punjab),30.245,75.844,crop_burning,5,1
+Bathinda (Punjab),30.211,74.945,crop_burning,4,1
+Patiala (Punjab),30.339,76.387,crop_burning,4,1
+Karnal (Haryana),29.686,76.990,crop_burning,3,1
+Panipat (Haryana),29.391,76.963,industrial_plume,4,0
+Ghazipur (Delhi),28.624,77.323,garbage_fire,3,0
+Anand Vihar (Delhi),28.647,77.316,vehicular_smog,4,0
