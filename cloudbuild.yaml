@@ -1,0 +1,105 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# cloudbuild.yaml — builds and deploys both Cloud Run services
+# Trigger this manually or attach to a GitHub push trigger in GCP Console.
+# ──────────────────────────────────────────────────────────────────────────────
+substitutions:
+  _PROJECT_ID: gen-lang-client-0469618448
+  _REGION: us-central1
+  _API_IMAGE: gcr.io/$PROJECT_ID/airsentinel-api
+  _DASH_IMAGE: gcr.io/$PROJECT_ID/airsentinel-dashboard
+
+steps:
+  # ── 1. Build FastAPI image ──────────────────────────────────────────────────
+  - name: "gcr.io/cloud-builders/docker"
+    id: build-api
+    args:
+      - build
+      - -t
+      - ${_API_IMAGE}:$COMMIT_SHA
+      - -t
+      - ${_API_IMAGE}:latest
+      - -f
+      - Dockerfile
+      - .
+
+  # ── 2. Build Streamlit image ────────────────────────────────────────────────
+  - name: "gcr.io/cloud-builders/docker"
+    id: build-dashboard
+    args:
+      - build
+      - -t
+      - ${_DASH_IMAGE}:$COMMIT_SHA
+      - -t
+      - ${_DASH_IMAGE}:latest
+      - -f
+      - dashboard/Dockerfile
+      - .
+
+  # ── 3. Push FastAPI image ───────────────────────────────────────────────────
+  - name: "gcr.io/cloud-builders/docker"
+    id: push-api
+    waitFor: [build-api]
+    args: [push, "${_API_IMAGE}:$COMMIT_SHA"]
+
+  - name: "gcr.io/cloud-builders/docker"
+    id: push-api-latest
+    waitFor: [build-api]
+    args: [push, "${_API_IMAGE}:latest"]
+
+  # ── 4. Push Streamlit image ─────────────────────────────────────────────────
+  - name: "gcr.io/cloud-builders/docker"
+    id: push-dashboard
+    waitFor: [build-dashboard]
+    args: [push, "${_DASH_IMAGE}:$COMMIT_SHA"]
+
+  - name: "gcr.io/cloud-builders/docker"
+    id: push-dashboard-latest
+    waitFor: [build-dashboard]
+    args: [push, "${_DASH_IMAGE}:latest"]
+
+  # ── 5. Deploy FastAPI to Cloud Run ──────────────────────────────────────────
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: deploy-api
+    waitFor: [push-api]
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - airsentinel-api
+      - --image=${_API_IMAGE}:$COMMIT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --memory=512Mi
+      - --cpu=1
+      - --min-instances=0
+      - --max-instances=5
+
+  # ── 6. Deploy Streamlit to Cloud Run ────────────────────────────────────────
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: deploy-dashboard
+    waitFor: [push-dashboard]
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - airsentinel-dashboard
+      - --image=${_DASH_IMAGE}:$COMMIT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --memory=512Mi
+      - --cpu=1
+      - --min-instances=0
+      - --max-instances=3
+
+images:
+  - ${_API_IMAGE}:$COMMIT_SHA
+  - ${_API_IMAGE}:latest
+  - ${_DASH_IMAGE}:$COMMIT_SHA
+  - ${_DASH_IMAGE}:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY

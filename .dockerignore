@@ -1,0 +1,15 @@
+# Excludes files that don't need to be inside Docker images
+.git/
+.gitignore
+.env
+.env.*
+*.md
+docs/
+.DS_Store
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.venv/
